@@ -25,6 +25,7 @@
 
   self.refreshControl = [[NBDianDianDianRefresh alloc] initInScrollView:self.scrollView];
   [self.refreshControl addTarget:self response:@selector(requestData)];
+  self.refreshControl.pullDistance = self.refreshControl.itemWidth*4;
 
   
   // 制作一些背景视图
