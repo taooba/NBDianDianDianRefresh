@@ -11,23 +11,24 @@
 
 @interface ViewController ()
 
-@property (nonatomic, strong) UIScrollView *scrollView;
+@property (weak, nonatomic) IBOutlet UIScrollView *scrollView;
+@property (nonatomic, strong) NBDianDianDianRefresh *refreshControl;
 @end
 
 @implementation ViewController
 
 - (void)viewDidLoad {
   [super viewDidLoad];
-  CGRect bounds = self.view.bounds;
-  
-  self.scrollView = [[UIScrollView alloc] initWithFrame:bounds];
-  [self.view addSubview:self.scrollView];
-  
-  self.scrollView.contentSize = CGSizeMake(bounds.size.width*4, bounds.size.height*2);
-  
-  NBDianDianDianRefresh *refresh = [[NBDianDianDianRefresh alloc] initInScrollView:self.scrollView];
 
-  CGFloat itemCount = 30;
+  CGRect bounds = self.scrollView.bounds;
+  self.scrollView.contentSize = CGSizeMake(bounds.size.width*4, bounds.size.height*2);
+
+  self.refreshControl = [[NBDianDianDianRefresh alloc] initInScrollView:self.scrollView];
+  [self.refreshControl addTarget:self response:@selector(requestData)];
+
+  
+  // 制作一些背景视图
+  CGFloat itemCount = 50;
   CGFloat itemSpacing = 4;
   CGFloat itemW = (self.scrollView.contentSize.width-itemSpacing)/itemCount-itemSpacing;
   CGFloat itemH = (self.scrollView.contentSize.height-itemSpacing)/itemCount-itemSpacing;
@@ -40,7 +41,13 @@
       [self.scrollView addSubview:view];
     }
   }
-  NSLog(@"end");
+}
+
+- (void)requestData {
+  // 延时
+  dispatch_after(dispatch_time(DISPATCH_TIME_NOW, (int64_t)(3 * NSEC_PER_SEC)), dispatch_get_main_queue(), ^{
+    [self.refreshControl endRefreshing];
+  });
 }
 
 

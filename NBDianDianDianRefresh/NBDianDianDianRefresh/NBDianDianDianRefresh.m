@@ -26,35 +26,53 @@ typedef NS_ENUM(NSUInteger, PullRefreshDirection) {
 
 @property (nonatomic, assign) PullRefreshDirection direction;
 
+@property (nonatomic, assign) NSObject *reponseTarget;
+@property (nonatomic, assign) SEL responseSelector;
 
-@property (nonatomic, assign) CGPoint startOffset;
-@property (nonatomic, assign) CGFloat refreshControlWidth;
 @property (nonatomic, assign) BOOL isPullSuccess;
+@property (nonatomic, assign) UIEdgeInsets originalInset;
+
 @end
 
 @implementation NBDianDianDianRefresh
 
 - (instancetype)initInScrollView:(UIScrollView *)scrollView {
   self = [super init];
+
   self.scrollView = scrollView;
-  
   [self.scrollView addObserver:self forKeyPath:@"contentOffset" options:NSKeyValueObservingOptionNew context:nil];
   [self.scrollView addObserver:self forKeyPath:@"contentInset" options:NSKeyValueObservingOptionNew context:nil];
   [self.scrollView.panGestureRecognizer addObserver:self forKeyPath:@"state" options:NSKeyValueObservingOptionNew context:nil];
   [self.scrollView addSubview:self];
 
-  self.backgroundColor = [UIColor blueColor];
-  
-  self.itemViews = [NSMutableArray array];
-  for (int i=0; i<3; i++) {
-    UIView *item = [[UIView alloc] init];
-    [self addSubview:item];
-    item.backgroundColor = [UIColor redColor];
-    [self.itemViews addObject:item];
-  }
-  
-  self.refreshControlWidth = 60;
+  self.itemCount = 3;
+  self.itemColor = [UIColor redColor];
+  self.itemWidth = 20;
+  self.itemSpacing = 20;
+  self.refreshControlWidth = self.itemWidth*2;
+  self.pullDistance = self.itemWidth*3;
   return self;
+}
+
+
+- (void)addTarget:(NSObject *)target response:(SEL)selector {
+  self.reponseTarget = target;
+  self.responseSelector = selector;
+}
+
+
+- (void)endRefreshing {
+  [UIView animateWithDuration:0.3 animations:^{
+    [self setScrollViewContentInset:self.originalInset];
+    [self setupRefreshControlFrame];
+  }];
+  
+  self.isPullSuccess = false;
+  self.direction = PullRefreshDirectionNone;
+  for (UIView *item in self.itemViews) {
+    [item.layer removeAllAnimations];
+    item.alpha = 1;
+  }
 }
 
 
@@ -69,12 +87,20 @@ typedef NS_ENUM(NSUInteger, PullRefreshDirection) {
   BOOL isContentOffset = [keyPath isEqualToString:@"contentOffset"];
   BOOL isState = [keyPath isEqualToString:@"state"];
 
-  // 触摸开始时，下拉状态重置为 none
-  if (isState && !self.isPullSuccess && [change[NSKeyValueChangeNewKey] integerValue] == UIGestureRecognizerStateBegan) {
+  // 触摸开始时，拖拽状态重置为 none
+  if (isState && !self.isPullSuccess && [change[NSKeyValueChangeNewKey] intValue] == UIGestureRecognizerStateBegan) {
     self.direction = PullRefreshDirectionNone;
     self.isPullSuccess = false;
   }
   
+  // 触摸结束时, 判断拖拽刷新是否成功
+  if (isState) {
+    UIGestureRecognizerState state = [change[NSKeyValueChangeNewKey] intValue];
+    if (state != UIGestureRecognizerStateEnded && state != UIGestureRecognizerStateFailed && state != UIGestureRecognizerStateCancelled) return;
+    CGFloat progress = [self fetchRefreshControllPullProgress];
+    if (progress == 1) self.isPullSuccess = true;
+  }
+
   // 获取下拉刷新的方向
   if (isContentOffset && self.direction == PullRefreshDirectionNone && self.scrollView.isDragging) {
     self.direction = [self fetchPullRefreshDirection];
@@ -94,6 +120,7 @@ typedef NS_ENUM(NSUInteger, PullRefreshDirection) {
 
 
 #pragma mark - private methods -
+/** 获取 ScrollView 的 contentInset (兼容iOS11) */
 - (UIEdgeInsets)fetchScrollViewContentInset {
   if (@available(iOS 11.0, *)) {
     return self.scrollView.adjustedContentInset;
@@ -101,16 +128,21 @@ typedef NS_ENUM(NSUInteger, PullRefreshDirection) {
   return self.scrollView.contentInset;
 }
 
-- (void)setScrollViewContentInset:(UIEdgeInsets)contentInset {
-  UIEdgeInsets inset = contentInset;
+
+/** 设置 ScrollView 的 contentInset (兼容iOS11) */
+- (void)setScrollViewContentInset:(UIEdgeInsets)targetInset {
+  UIEdgeInsets tInset = targetInset;
   if (@available(iOS 11.0, *)) {
-    UIEdgeInsets adjustInset = self.scrollView.adjustedContentInset;
-    inset = UIEdgeInsetsMake(inset.top-adjustInset.top, inset.left-adjustInset.left, inset.bottom-adjustInset.bottom, inset.right-adjustInset.right);
+    UIEdgeInsets cInset = self.scrollView.contentInset;
+    UIEdgeInsets aInset = self.scrollView.adjustedContentInset;
+    tInset = UIEdgeInsetsMake(tInset.top-(aInset.top-cInset.top), tInset.left-(aInset.left-cInset.left),
+                           tInset.bottom-(aInset.bottom-cInset.bottom), tInset.right-(aInset.right-cInset.right));
   }
-  self.scrollView.contentInset = inset;
+  self.scrollView.contentInset = tInset;
 }
 
 
+/** 获取 ScrollView 拖拽的方向 */
 - (PullRefreshDirection)fetchPullRefreshDirection {
   CGSize cSize = self.scrollView.contentSize;
   UIEdgeInsets cInsets = [self fetchScrollViewContentInset];
@@ -122,6 +154,8 @@ typedef NS_ENUM(NSUInteger, PullRefreshDirection) {
   return PullRefreshDirectionNone;
 }
 
+
+/** 获取刷新控件的拖拽进度 */
 - (CGFloat)fetchRefreshControllPullProgress {
   CGSize cSize = self.scrollView.contentSize;
   CGRect sBounds = self.scrollView.bounds;
@@ -129,21 +163,25 @@ typedef NS_ENUM(NSUInteger, PullRefreshDirection) {
   
   CGFloat progress = 0;
   if (self.direction == PullRefreshDirectionTop && CGRectGetMinY(sBounds) < -sInsets.top) {
-    progress = fabs(CGRectGetMinY(sBounds)+sInsets.top) / self.refreshControlWidth;
+    progress = fabs(CGRectGetMinY(sBounds)+sInsets.top) / self.pullDistance;
   }
   if (self.direction == PullRefreshDirectionBottom && CGRectGetMaxY(sBounds) > (cSize.height+sInsets.bottom)) {
-    progress = fabs(CGRectGetMaxY(sBounds)-cSize.height-sInsets.bottom) / self.refreshControlWidth;
+    progress = fabs(CGRectGetMaxY(sBounds)-cSize.height-sInsets.bottom) / self.pullDistance;
   }
   if (self.direction == PullRefreshDirectionLeft && CGRectGetMinX(sBounds) < -sInsets.left) {
-    progress = fabs(CGRectGetMinX(sBounds)+sInsets.left) / self.refreshControlWidth;
+    progress = fabs(CGRectGetMinX(sBounds)+sInsets.left) / self.pullDistance;
   }
   if (self.direction == PullRefreshDirectionRight && CGRectGetMaxX(sBounds) > (cSize.width+sInsets.right)) {
-    progress = fabs(CGRectGetMaxX(sBounds)-cSize.width-sInsets.right) /  self.refreshControlWidth;
+    progress = fabs(CGRectGetMaxX(sBounds)-cSize.width-sInsets.right) /  self.pullDistance;
   }
+  
+  progress = MAX(0, progress);
+  progress = MIN(1, progress);
   return progress;
 }
 
 
+/** 根据拖拽方向设置刷新控件的 frame */
 - (void)setupRefreshControlFrame {
   CGSize sSize = self.scrollView.frame.size;
   CGSize cSize = self.scrollView.contentSize;
@@ -167,6 +205,8 @@ typedef NS_ENUM(NSUInteger, PullRefreshDirection) {
   self.frame = frame;
 }
 
+
+/** 更新刷新控件的位置 */
 - (void)updateRefreshControlPosition {
   if (self.direction == PullRefreshDirectionNone) return;
   CGRect frame = self.frame;
@@ -174,49 +214,52 @@ typedef NS_ENUM(NSUInteger, PullRefreshDirection) {
   if (self.direction == PullRefreshDirectionTop || self.direction == PullRefreshDirectionBottom) {
     frame.origin.x = sOffset.x;
   }
-  if (self.direction == PullRefreshDirectionLeft || self.direction == PullRefreshDirectionLeft) {
+  if (self.direction == PullRefreshDirectionLeft || self.direction == PullRefreshDirectionRight) {
     frame.origin.y = sOffset.y;
   }
   self.frame = frame;
 }
 
+
+/** 更新刷新控件的子视图属性 */
 - (void)updateRefreshControlItemsProperty {
   if (self.direction == PullRefreshDirectionNone) return;
   CGFloat pullProgress = [self fetchRefreshControllPullProgress];
   if (pullProgress == 0) return;
-  if (pullProgress >= 1) self.isPullSuccess = true;
 
-  NSInteger itemTotal = 3;
-  CGFloat itemWidth = 20;
-  CGFloat itemSpacing = 20;
-  CGFloat itemTotalLength = (itemWidth+itemSpacing)*itemTotal - itemSpacing;
+  CGFloat itemTotalLength = (self.itemWidth+self.itemSpacing)*self.itemViews.count - self.itemSpacing;
   CGPoint start = CGPointMake((CGRectGetWidth(self.frame)-itemTotalLength)/2, (CGRectGetHeight(self.frame)-itemTotalLength)/2);
   
-  for (int i=0; i<itemTotal; i++) {
-    CGFloat itemProgress = (pullProgress - (1.0/itemTotal)*i)/(1.0/itemTotal);
+  for (int i=0; i<self.itemViews.count; i++) {
+    UIView *item = self.itemViews[i];
+    CGFloat itemProgress = ((pullProgress-0.4) - (0.6/self.itemViews.count)*i)/(0.6/self.itemViews.count);
     itemProgress = MAX(0, itemProgress);
     itemProgress = MIN(1, itemProgress);
 
     CGPoint fPoint = CGPointZero;
     CGPoint tPoint = CGPointZero;
     if (self.direction == PullRefreshDirectionTop || self.direction == PullRefreshDirectionBottom) {
-      tPoint = CGPointMake(i*(itemWidth+itemSpacing)+start.x, (CGRectGetHeight(self.frame)-itemWidth)/2);
+      tPoint = CGPointMake(i*(self.itemWidth+self.itemSpacing)+start.x, (CGRectGetHeight(self.frame)-self.itemWidth)/2);
       fPoint = CGPointMake(tPoint.x, tPoint.y + CGRectGetHeight(self.frame) * (self.direction == PullRefreshDirectionTop ? -1 : 1));
     }
     if (self.direction == PullRefreshDirectionLeft || self.direction == PullRefreshDirectionRight) {
-      tPoint = CGPointMake((CGRectGetWidth(self.frame)-itemWidth)/2, i*(itemWidth+itemSpacing)+start.y);
+      tPoint = CGPointMake((CGRectGetWidth(self.frame)-self.itemWidth)/2, i*(self.itemWidth+self.itemSpacing)+start.y);
       fPoint = CGPointMake(tPoint.x + CGRectGetWidth(self.frame) * (self.direction == PullRefreshDirectionLeft ? -1 : 1), tPoint.y);
     }
     
     CGFloat t = itemProgress;
     CGFloat f = 1 - itemProgress;
     CGPoint origin = CGPointMake(f*fPoint.x + t*tPoint.x, f*fPoint.y + t*tPoint.y);
-    CGRect frame = CGRectMake(origin.x, origin.y, itemWidth, itemWidth);
-    [self.itemViews[i] setFrame:frame];
+    CGRect frame = CGRectMake(origin.x, origin.y, self.itemWidth, self.itemWidth);
+    
+    item.alpha = itemProgress == 1 ? 1 : 0.5;
+    item.frame = frame;
+    item.layer.cornerRadius = frame.size.width/2;
   }
 }
 
 
+/** 执行刷新时的 loading 动画 */
 - (void)runItemsAnimation {
   for (int i=0; i<self.itemViews.count; i++) {
     UIView *item = self.itemViews[i];
@@ -227,9 +270,24 @@ typedef NS_ENUM(NSUInteger, PullRefreshDirection) {
 }
 
 #pragma mark - getter && setter
+- (NSMutableArray *)itemViews {
+  if (_itemViews != NULL) return _itemViews;
+  _itemViews = [NSMutableArray array];
+  for (int i=0; i<self.itemCount; i++) {
+    UIView *item = [[UIView alloc] init];
+    [self addSubview:item];
+    item.backgroundColor = self.itemColor;
+    [_itemViews addObject:item];
+  }
+  return _itemViews;
+}
+
+
 - (void)setIsPullSuccess:(BOOL)isPullSuccess {
-  if (isPullSuccess == _isPullSuccess) return;
+  if (_isPullSuccess == isPullSuccess) return;
   _isPullSuccess = isPullSuccess;
+  if (_isPullSuccess == false) return;
+  
   UIEdgeInsets inset = [self fetchScrollViewContentInset];
   CGFloat gap = self.refreshControlWidth * (_isPullSuccess ? 1 : -1);
   switch (self.direction) {
@@ -239,15 +297,19 @@ typedef NS_ENUM(NSUInteger, PullRefreshDirection) {
     case PullRefreshDirectionRight:  inset.right  += gap; break;
     default: break;
   }
+  self.originalInset = [self fetchScrollViewContentInset];
+  CGPoint offset = self.scrollView.contentOffset;
   [self setScrollViewContentInset:inset];
-  if (_isPullSuccess) [self runItemsAnimation];
+  self.scrollView.contentOffset = offset;
+  
+  if ([self.reponseTarget respondsToSelector:self.responseSelector]) {
+     #pragma clang diagnostic push
+     #pragma clang diagnostic ignored "-Warc-performSelector-leaks"
+    [self.reponseTarget performSelector:self.responseSelector withObject:nil];
+     #pragma clang diagnostic pop
+  }
+  [self runItemsAnimation];
 }
+
 @end
-
-
-
-
-
-
-
 
