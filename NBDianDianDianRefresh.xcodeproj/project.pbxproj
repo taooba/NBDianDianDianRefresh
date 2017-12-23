@@ -13,6 +13,7 @@
 		3C0A37F91FEC5FE1008B8A84 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 3C0A37F81FEC5FE1008B8A84 /* Assets.xcassets */; };
 		3C0A37FC1FEC5FE1008B8A84 /* LaunchScreen.storyboard in Resources */ = {isa = PBXBuildFile; fileRef = 3C0A37FA1FEC5FE1008B8A84 /* LaunchScreen.storyboard */; };
 		3C0A37FF1FEC5FE1008B8A84 /* main.m in Sources */ = {isa = PBXBuildFile; fileRef = 3C0A37FE1FEC5FE1008B8A84 /* main.m */; };
+		3C0A38081FEC6A60008B8A84 /* NBDianDianDianRefresh.m in Sources */ = {isa = PBXBuildFile; fileRef = 3C0A38071FEC6A60008B8A84 /* NBDianDianDianRefresh.m */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -26,6 +27,8 @@
 		3C0A37FB1FEC5FE1008B8A84 /* Base */ = {isa = PBXFileReference; lastKnownFileType = file.storyboard; name = Base; path = Base.lproj/LaunchScreen.storyboard; sourceTree = "<group>"; };
 		3C0A37FD1FEC5FE1008B8A84 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
 		3C0A37FE1FEC5FE1008B8A84 /* main.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = main.m; sourceTree = "<group>"; };
+		3C0A38061FEC6A60008B8A84 /* NBDianDianDianRefresh.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = NBDianDianDianRefresh.h; sourceTree = "<group>"; };
+		3C0A38071FEC6A60008B8A84 /* NBDianDianDianRefresh.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = NBDianDianDianRefresh.m; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -58,6 +61,7 @@
 		3C0A37EE1FEC5FE1008B8A84 /* NBDianDianDianRefresh */ = {
 			isa = PBXGroup;
 			children = (
+				3C0A38051FEC6981008B8A84 /* NBDianDianDianRefresh */,
 				3C0A37EF1FEC5FE1008B8A84 /* AppDelegate.h */,
 				3C0A37F01FEC5FE1008B8A84 /* AppDelegate.m */,
 				3C0A37F21FEC5FE1008B8A84 /* ViewController.h */,
@@ -67,6 +71,15 @@
 				3C0A37FA1FEC5FE1008B8A84 /* LaunchScreen.storyboard */,
 				3C0A37FD1FEC5FE1008B8A84 /* Info.plist */,
 				3C0A37FE1FEC5FE1008B8A84 /* main.m */,
+			);
+			path = NBDianDianDianRefresh;
+			sourceTree = "<group>";
+		};
+		3C0A38051FEC6981008B8A84 /* NBDianDianDianRefresh */ = {
+			isa = PBXGroup;
+			children = (
+				3C0A38061FEC6A60008B8A84 /* NBDianDianDianRefresh.h */,
+				3C0A38071FEC6A60008B8A84 /* NBDianDianDianRefresh.m */,
 			);
 			path = NBDianDianDianRefresh;
 			sourceTree = "<group>";
@@ -143,6 +156,7 @@
 			buildActionMask = 2147483647;
 			files = (
 				3C0A37F41FEC5FE1008B8A84 /* ViewController.m in Sources */,
+				3C0A38081FEC6A60008B8A84 /* NBDianDianDianRefresh.m in Sources */,
 				3C0A37FF1FEC5FE1008B8A84 /* main.m in Sources */,
 				3C0A37F11FEC5FE1008B8A84 /* AppDelegate.m in Sources */,
 			);
@@ -281,6 +295,7 @@
 				CODE_SIGN_STYLE = Automatic;
 				DEVELOPMENT_TEAM = ZFTLJKWKLT;
 				INFOPLIST_FILE = NBDianDianDianRefresh/Info.plist;
+				IPHONEOS_DEPLOYMENT_TARGET = 8.0;
 				LD_RUNPATH_SEARCH_PATHS = "$(inherited) @executable_path/Frameworks";
 				PRODUCT_BUNDLE_IDENTIFIER = bio.tao.NBDianDianDianRefresh;
 				PRODUCT_NAME = "$(TARGET_NAME)";
@@ -295,6 +310,7 @@
 				CODE_SIGN_STYLE = Automatic;
 				DEVELOPMENT_TEAM = ZFTLJKWKLT;
 				INFOPLIST_FILE = NBDianDianDianRefresh/Info.plist;
+				IPHONEOS_DEPLOYMENT_TARGET = 8.0;
 				LD_RUNPATH_SEARCH_PATHS = "$(inherited) @executable_path/Frameworks";
 				PRODUCT_BUNDLE_IDENTIFIER = bio.tao.NBDianDianDianRefresh;
 				PRODUCT_NAME = "$(TARGET_NAME)";
