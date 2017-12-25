@@ -8,6 +8,15 @@
 
 #import <UIKit/UIKit.h>
 
+/** 下拉刷新的方向 */
+typedef NS_ENUM(NSUInteger, PullRefreshDirection) {
+  PullRefreshDirectionNone = 0,
+  PullRefreshDirectionLeft,
+  PullRefreshDirectionRight,
+  PullRefreshDirectionTop,
+  PullRefreshDirectionBottom,
+};
+
 @interface NBDianDianDianRefresh : UIView
 
 /** 刷新控件内圆点的个数 默认:3 */
@@ -38,8 +47,13 @@
 
 - (instancetype)initInScrollView:(UIScrollView *)scrollView;
 
+/** 添加刷新控件开始刷新时响应方法 */
 - (void)addTarget:(NSObject*)target response:(SEL)selector;
 
+/** 在刷新控件为刷新时 可以调用方法开始刷新 */
+- (void)beginRefreshingWithDirection:(PullRefreshDirection)direction;
+
+/** 在控件刷新时 停止结束刷新动作 */
 - (void)endRefreshing;
 
 @end
